@@ -1,0 +1,58 @@
+# Azure ML Pipeline — Air Quality Index Prediction
+# Student: SUBHASHINI | Roll No: 727823tuam053
+
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+experiment_name: SKCT_727823tuam053_AirQualityIndexPrediction
+
+display_name: AQI_Pipeline_727823tuam053
+description: >
+  Three-stage MLOps pipeline for Air Quality Index Prediction.
+  Student: SUBHASHINI | Roll: 727823tuam053
+
+settings:
+  default_compute: azureml:cpu-cluster
+  default_datastore: azureml:workspaceblobstore
+  continue_on_step_failure: false
+
+jobs:
+  stage1_data_prep:
+    type: command
+    display_name: "Stage 1 – Data Preparation"
+    command: >
+      python data_prep.py
+    code: ./code
+    environment: azureml:AQI-env@latest
+    outputs:
+      processed_data:
+        type: uri_folder
+        path: azureml://datastores/workspaceblobstore/paths/727823tuam053/processed/
+
+  stage2_train:
+    type: command
+    display_name: "Stage 2 – Model Training"
+    command: >
+      python train_pipeline.py
+    code: ./code
+    environment: azureml:AQI-env@latest
+    inputs:
+      processed_data: ${{parent.jobs.stage1_data_prep.outputs.processed_data}}
+    outputs:
+      model_output:
+        type: uri_folder
+        path: azureml://datastores/workspaceblobstore/paths/727823tuam053/model/
+
+  stage3_evaluate:
+    type: command
+    display_name: "Stage 3 – Model Evaluation"
+    command: >
+      python evaluate.py
+    code: ./code
+    environment: azureml:AQI-env@latest
+    inputs:
+      model_output: ${{parent.jobs.stage2_train.outputs.model_output}}
+    outputs:
+      evaluation_report:
+        type: uri_folder
+        path: azureml://datastores/workspaceblobstore/paths/727823tuam053/evaluation/
